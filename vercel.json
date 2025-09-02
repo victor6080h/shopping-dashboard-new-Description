@@ -1,12 +1,23 @@
 {
-  "version": 2,
-  "builds": [
-    { "src": "index.html", "use": "@vercel/static" },
-    { "src": "api/**/*.js", "use": "@vercel/node" }
+  "functions": {
+    "api/**/*.js": {
+      "runtime": "nodejs18.x"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/public/index.html"
+    },
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    }
   ],
-  "routes": [
-    { "src": "/api/(.*)", "dest": "/api/$1" },
-    { "src": "/(.*)", "dest": "/index.html" }
-  ],
-  "functions": { "api/**/*.js": { "runtime": "nodejs18.x" } }
+  "env": {
+    "NAVER_CLIENT_ID": "@naver_client_id",
+    "NAVER_CLIENT_SECRET": "@naver_client_secret",
+    "COUPANG_ACCESS_KEY": "@coupang_access_key",
+    "COUPANG_SECRET_KEY": "@coupang_secret_key"
+  }
 }
