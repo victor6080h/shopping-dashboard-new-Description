@@ -1,17 +1,17 @@
 {
-  "name": "playg-shopping-dashboard",
+  "name": "shopping-dashboard",
   "version": "1.0.0",
-  "description": "PLAY.G 실시간 쇼핑분석 대시보드",
+  "description": "실시간 쇼핑 분석 대시보드",
   "main": "index.js",
+  "engines": {
+    "node": "18.x"
+  },
   "scripts": {
-    "build": "echo 'Build complete'",
-    "start": "vercel dev"
+    "start": "node server.js",
+    "dev": "node server.js"
   },
   "dependencies": {
     "axios": "^1.6.0",
-    "crypto": "^1.0.1"
-  },
-  "engines": {
-    "node": "20.x"
+    "cors": "^2.8.5"
   }
 }
