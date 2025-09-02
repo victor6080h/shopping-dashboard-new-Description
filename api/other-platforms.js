@@ -1,108 +1,109 @@
 export default async function handler(req, res) {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    res.setHeader('Content-Type', 'application/json');
+  // CORS 헤더 설정
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
+
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
+  try {
+    const { query = '인기상품', category = '', platform = 'gmarket' } = req.query;
     
-    if (req.method === 'OPTIONS') {
-        return res.status(200).end();
+    // 기타 플랫폼 Mock 데이터 생성
+    const platforms = {
+      gmarket: { name: 'G마켓', baseUrl: 'http://item.gmarket.co.kr' },
+      auction: { name: '옥션', baseUrl: 'http://itempage3.auction.co.kr' },
+      interpark: { name: '인터파크', baseUrl: 'http://shopping.interpark.com' },
+      lotte: { name: '롯데ON', baseUrl: 'https://www.lotte.com' },
+      ssg: { name: 'SSG.COM', baseUrl: 'https://www.ssg.com' }
+    };
+
+    const categories = ['전자제품', '패션의류', '생활용품', '식품', '화장품', '도서', '취미게임', '육아용품', '자동차', '스포츠', '건강식품', '가구인테리어'];
+    const products = [];
+
+    // 여러 플랫폼의 상품을 믹스하여 200위까지 생성
+    const platformKeys = Object.keys(platforms);
+    
+    for (let i = 1; i <= 200; i++) {
+      const currentPlatform = platformKeys[i % platformKeys.length];
+      const platformInfo = platforms[currentPlatform];
+      
+      const product = {
+        rank: i,
+        title: `${platformInfo.name} 인기상품 ${i}위`,
+        price: Math.floor(Math.random() * 400000) + 8000,
+        originalPrice: Math.floor(Math.random() * 500000) + 50000,
+        discountRate: Math.floor(Math.random() * 60) + 5,
+        image: `https://picsum.photos/300/250?random=${i + 4000}`,
+        link: `${platformInfo.baseUrl}/product/${Math.floor(Math.random() * 1000000)}`,
+        mall: platformInfo.name,
+        rating: (3.8 + Math.random() * 1.2).toFixed(1),
+        reviewCount: Math.floor(Math.random() * 3000) + 50,
+        category: categories[Math.floor(Math.random() * categories.length)],
+        platform: 'other',
+        platformType: currentPlatform,
+        freeShipping: Math.random() > 0.4, // 60% 확률로 무료배송
+        deliveryDays: Math.floor(Math.random() * 5) + 1, // 1-5일 배송
+        productId: Math.floor(Math.random() * 1000000),
+        
+        // 플랫폼별 특별 혜택
+        specialOffer: getSpecialOffer(currentPlatform, i),
+        memberDiscount: Math.random() > 0.7 ? Math.floor(Math.random() * 10) + 5 : 0
+      };
+      
+      // 할인가 계산
+      if (product.discountRate > 0) {
+        product.price = Math.floor(product.originalPrice * (100 - product.discountRate) / 100);
+      }
+      
+      products.push(product);
     }
 
-    try {
-        const { category = '패션의류', platform = 'gmarket', sortType = 'popularity', start = 1, display = 100 } = req.query;
-        
-        const platformInfo = {
-            'gmarket': { name: '지마켓', color: '#00A0FF', baseUrl: 'https://www.gmarket.co.kr' },
-            'auction': { name: '옥션', color: '#FF6B35', baseUrl: 'https://www.auction.co.kr' },
-            'interpark': { name: '인터파크', color: '#E31E24', baseUrl: 'https://www.interpark.com' },
-            '11st': { name: '11번가', color: '#FF0558', baseUrl: 'https://www.11st.co.kr' },
-            'lotte': { name: '롯데온', color: '#E30B17', baseUrl: 'https://www.lotteon.com' },
-            'ssg': { name: 'SSG', color: '#FF5722', baseUrl: 'https://www.ssg.com' }
-        };
-
-        const currentPlatform = platformInfo[platform] || platformInfo['gmarket'];
-        
-        // 카테고리별 실제 상품명 Templates
-        const productData = {
-            '패션의류': [
-                { name: '여성 겨울 롱패딩', brands: ['노스페이스', '파타고니아', '컬럼비아'] },
-                { name: '남성 캐시미어 코트', brands: ['버버리', '막스마라', '캘빈클라인'] },
-                { name: '청바지 스키니핏', brands: ['리바이스', '리', '디젤'] },
-                { name: '니트 터틀넥', brands: ['유니클로', '자라', '무지'] }
-            ],
-            '화장품/뷰티': [
-                { name: 'BB크림 SPF30', brands: ['미샤', '에뛰드하우스', '아이오페'] },
-                { name: '립틴트 벨벳', brands: ['페리페라', '롬앤', '3CE'] },
-                { name: '아이크림 주름개선', brands: ['헤라', '설화수', 'SK2'] },
-                { name: '클렌징오일 메이크업', brands: ['바닐라코', '반디', '이니스프리'] }
-            ],
-            '디지털/가전': [
-                { name: '무선충전기 고속', brands: ['삼성', '애플', '벨킨'] },
-                { name: 'USB-C 허브', brands: ['유그린', '바사우스', 'HP'] },
-                { name: '블루투스 헤드폰', brands: ['소니', '보스', 'JBL'] },
-                { name: '스마트워치 방수', brands: ['애플', '삼성', '가민'] }
-            ]
-        };
-
-        const categoryProducts = productData[category] || productData['패션의류'];
-        
-        // Mock 데이터 생성
-        const items = Array.from({ length: Math.min(display, 100) }, (_, index) => {
-            const rank = parseInt(start) + index;
-            const product = categoryProducts[Math.floor(Math.random() * categoryProducts.length)];
-            const brand = product.brands[Math.floor(Math.random() * product.brands.length)];
-            
-            const originalPrice = Math.floor(Math.random() * 150000 + 30000);
-            const discountRate = Math.floor(Math.random() * 60) + 15;
-            const finalPrice = Math.floor(originalPrice * (100 - discountRate) / 100);
-            
-            return {
-                rank: rank,
-                productName: `${brand} ${product.name} ${Math.floor(Math.random() * 100) + 1}`,
-                category: category,
-                brand: brand,
-                price: finalPrice.toLocaleString() + '원',
-                originalPrice: originalPrice.toLocaleString() + '원',
-                discountRate: discountRate,
-                productUrl: `${currentPlatform.baseUrl}/item/${Math.floor(Math.random() * 9000000) + 1000000}`,
-                imageUrl: `https://via.placeholder.com/300x300/${currentPlatform.color.substring(1)}/white?text=${encodeURIComponent(product.name)}`,
-                mallName: currentPlatform.name,
-                maker: brand,
-                rating: (3.8 + Math.random() * 1.2).toFixed(1),
-                reviewCount: Math.floor(Math.random() * 3000) + 50,
-                platform: platform
-            };
-        });
-
-        // 정렬
-        if (sortType === 'popularity') {
-            items.sort((a, b) => (b.reviewCount * parseFloat(b.rating)) - (a.reviewCount * parseFloat(a.rating)));
-        } else {
-            items.sort((a, b) => parseFloat(b.rating) - parseFloat(a.rating));
-        }
-
-        items.forEach((item, index) => {
-            item.rank = parseInt(start) + index;
-        });
-
-        return res.status(200).json({
-            success: true,
-            platform: platform,
-            platformName: currentPlatform.name,
-            category: category,
-            sortType: sortType,
-            sortName: sortType === 'popularity' ? '실시간 인기순' : '추천순',
-            total: 8000,
-            count: items.length,
-            items: items,
-            timestamp: new Date().toISOString(),
-            note: `${currentPlatform.name}은 현재 Mock 데이터로 제공됩니다.`
-        });
-
-    } catch (error) {
-        return res.status(500).json({
-            success: false,
-            error: error.message
-        });
+    // 카테고리 필터 적용
+    let filteredProducts = products;
+    if (category) {
+      filteredProducts = products.filter(p => p.category === category);
     }
+
+    // 정렬 (인기순 기본)
+    filteredProducts.sort((a, b) => a.rank - b.rank);
+
+    res.status(200).json({
+      success: true,
+      total: filteredProducts.length,
+      products: filteredProducts,
+      platform: 'other',
+      supportedPlatforms: Object.keys(platforms),
+      note: '지마켓, 옥션, 인터파크, 롯데ON, SSG 통합 데이터',
+      lastUpdate: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('기타 플랫폼 API 오류:', error);
+    
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      platform: 'other',
+      lastUpdate: new Date().toISOString()
+    });
+  }
+}
+
+// 플랫폼별 특별 혜택 생성
+function getSpecialOffer(platform, rank) {
+  const offers = {
+    gmarket: ['스마일클럽 추가할인', 'G마켓 카드 할인', '무료배송'],
+    auction: ['옥션클럽 혜택', '경매 참여 가능', '빠른배송'],
+    interpark: ['적립금 5배', '인터파크 카드 할인', '당일배송'],
+    lotte: ['L.POINT 적립', '롯데카드 할인', '매장 픽업 가능'],
+    ssg: ['신세계포인트 적립', 'SSG카드 할인', '새벽배송']
+  };
+  
+  const platformOffers = offers[platform] || ['특가 혜택'];
+  return rank <= 50 ? platformOffers[Math.floor(Math.random() * platformOffers.length)] : null;
 }
