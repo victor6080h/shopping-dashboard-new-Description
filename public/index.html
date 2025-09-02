@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🛒 실시간 쇼핑 인기순위</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Arial, sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh; padding: 20px;
+        }
+        .container { 
+            max-width: 1200px; margin: 0 auto; background: white; 
+            border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.1); 
+            overflow: hidden;
+        }
+        .header { 
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24); 
+            color: white; padding: 30px; text-align: center;
+        }
+        .header h1 { font-size: 2.5em; margin-bottom: 10px; }
+        .controls { 
+            padding: 20px; background: #f8f9fa; display: flex; 
+            gap: 15px; align-items: center; flex-wrap: wrap;
+        }
+        select, button { 
+            padding: 10px 15px; border: 2px solid #e9ecef; 
+            border-radius: 8px; font-size: 14px;
+        }
+        button { 
+            background: #28a745; color: white; border: none; 
+            cursor: pointer; font-weight: 600;
+        }
+        button:hover { background: #218838; }
+        .tabs { display: flex; background: #f8f9fa; }
+        .tab { 
+            flex: 1; padding: 15px; background: #e9ecef; 
+            border: none; cursor: pointer; font-size: 16px; font-weight: 600;
+        }
+        .tab.active { background: white; color: #007bff; border-bottom: 3px solid #007bff; }
+        .content { display: none; padding: 30px; }
+        .content.active { display: block; }
+        .status { 
+            padding: 15px; background: #f8f9fa; border-radius: 8px; 
+            margin-bottom: 20px; text-align: center;
+        }
+        .products { 
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
+            gap: 20px;
+        }
+        .product { 
+            border: 1px solid #e9ecef; border-radius: 12px; 
+            overflow: hidden; transition: transform 0.3s; cursor: pointer;
+        }
+        .product:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .product-rank { 
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24); 
+            color: white; padding: 8px 15px; font-weight: bold;
+        }
+        .product-image { 
+            width: 100%; height: 180px; background: #f8f9fa; 
+            display: flex; align-items: center; justify-content: center;
+        }
+        .product-image img { width: 100%; height: 100%; object-fit: cover; }
+        .product-info { padding: 15px; }
+        .product-title { font-weight: 600; margin-bottom: 8px; line-height: 1.4; }
+        .product-price { 
+            font-size: 1.2em; font-weight: bold; color: #e74c3c; margin-bottom: 8px;
+        }
+        .product-meta { display: flex; justify-content: space-between; font-size: 0.9em; color: #6c757d; }
+        .loading { text-align: center; padding: 40px; }
+        .loading-spinner { 
+            width: 40px; height: 40px; border: 4px solid #f3f3f3; 
+            border-top: 4px solid #007bff; border-radius: 50%; 
+            animation: spin 1s linear infinite; margin: 0 auto 20px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .error { 
+            background: #f8d7da; color: #721c24; padding: 20px; 
+            border-radius: 8px; margin: 20px;
+        }
+        @media (max-width: 768px) {
+            .products { grid-template-columns: 1fr; }
+            .controls { flex-direction: column; align-items: stretch; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛒 실시간 쇼핑 인기순위</h1>
+            <p>네이버쇼핑 & 쿠팡 베스트 상품을 실시간으로!</p>
+        </div>
+
+        <div class="controls">
+            <div>
+                <label for="category">카테고리:</label>
+                <select id="category">
+                    <option value="패션">패션</option>
+                    <option value="화장품">화장품</option>
+                    <option value="디지털">디지털</option>
+                    <option value="가전">가전</option>
+                    <option value="생활용품">생활용품</option>
+                    <option value="식품">식품</option>
+                </select>
+            </div>
+            <div>
+                <label for="count">개수:</label>
+                <select id="count">
+                    <option value="20">20개</option>
+                    <option value="50">50개</option>
+                    <option value="100">100개</option>
+                </select>
+            </div>
+            <button onclick="loadData()">🔄 데이터 새로고침</button>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('naver')">네이버쇼핑 🟢</button>
+            <button class="tab" onclick="switchTab('coupang')">쿠팡 🧡</button>
+        </div>
+
+        <div id="naver-content" class="content active">
+            <div class="status" id="naver-status">네이버쇼핑 데이터를 불러오려면 '데이터 새로고침'을 클릭하세요</div>
+            <div class="products" id="naver-products"></div>
+        </div>
+
+        <div id="coupang-content" class="content">
+            <div class="status" id="coupang-status">쿠팡 데이터를 불러오려면 '데이터 새로고침'을 클릭하세요</div>
+            <div class="products" id="coupang-products"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentTab = 'naver';
+
+        function switchTab(tab) {
+            // 탭 활성화
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelector(`[onclick="switchTab('${tab}')"]`).classList.add('active');
+            
+            // 콘텐츠 전환
+            document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+            document.getElementById(`${tab}-content`).classList.add('active');
+            
+            currentTab = tab;
+        }
+
+        async function loadData() {
+            const category = document.getElementById('category').value;
+            const count = document.getElementById('count').value;
+            
+            // 네이버 데이터 로드
+            loadPlatformData('naver', category, count);
+            
+            // 쿠팡 데이터 로드
+            loadPlatformData('coupang', category, count);
+        }
+
+        async function loadPlatformData(platform, category, count) {
+            const statusEl = document.getElementById(`${platform}-status`);
+            const productsEl = document.getElementById(`${platform}-products`);
+            
+            // 로딩 표시
+            statusEl.innerHTML = `${platform === 'naver' ? '네이버쇼핑' : '쿠팡'} 데이터 로딩 중...`;
+            productsEl.innerHTML = '<div class="loading"><div class="loading-spinner"></div><p>데이터를 불러오는 중입니다...</p></div>';
+            
+            try {
+                const params = new URLSearchParams({
+                    category: category,
+                    [platform === 'naver' ? 'display' : 'limit']: count
+                });
+                
+                const response = await fetch(`/api/${platform}?${params}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    statusEl.innerHTML = `
+                        <strong>${platform === 'naver' ? '네이버쇼핑' : '쿠팡'}</strong> | 
+                        카테고리: ${data.category} | 
+                        상품수: ${data.count}개 | 
+                        업데이트: ${new Date(data.timestamp).toLocaleString()}
+                    `;
+                    
+                    displayProducts(productsEl, data.items);
+                } else {
+                    throw new Error(data.error || '알 수 없는 오류');
+                }
+                
+            } catch (error) {
+                console.error(`${platform} 오류:`, error);
+                statusEl.innerHTML = `❌ ${platform === 'naver' ? '네이버쇼핑' : '쿠팡'} 데이터 로드 실패: ${error.message}`;
+                productsEl.innerHTML = `
+                    <div class="error">
+                        <h3>오류 발생</h3>
+                        <p>${error.message}</p>
+                        <button onclick="loadPlatformData('${platform}', '${category}', '${count}')" style="margin-top: 10px;">다시 시도</button>
+                    </div>
+                `;
+            }
+        }
+
+        function displayProducts(container, items) {
+            if (!items || items.length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 40px; color: #6c757d;">상품이 없습니다</div>';
+                return;
+            }
+            
+            container.innerHTML = items.map(item => `
+                <div class="product" onclick="openProduct('${item.link}')">
+                    <div class="product-rank">#${item.rank}</div>
+                    <div class="product-image">
+                        ${item.image ? 
+                            `<img src="${item.image}" alt="${item.title}" onerror="this.style.display='none'">` : 
+                            '<div style="color: #6c757d;">이미지 없음</div>'
+                        }
+                    </div>
+                    <div class="product-info">
+                        <div class="product-title">${item.title}</div>
+                        <div class="product-price">${item.price}</div>
+                        <div class="product-meta">
+                            <span>${item.mallName}</span>
+                            <span>${item.brand}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function openProduct(link) {
+            if (link && link.trim()) {
+                window.open(link, '_blank', 'noopener,noreferrer');
+            } else {
+                alert('구매 링크가 없습니다.');
+            }
+        }
+
+        // 카테고리 변경 시 자동 새로고침
+        document.getElementById('category').addEventListener('change', loadData);
+        document.getElementById('count').addEventListener('change', loadData);
+    </script>
+</body>
+</html>
+Commit new file 클릭
+🚀 4단계: Vercel 새 프로젝트 생성
+4-1: Vercel에서 새 프로젝트 생성
+vercel.com 접속 → 로그인
+New Project 클릭
+shopping-dashboard-new 저장소 선택
+Import 클릭
+4-2: 프로젝트 설정
+Configure Project 페이지에서:
+
+Project Name: shopping-dashboard-new ✅
+Framework Preset: Other ✅
+Root Directory: ./ ✅
+Build Command: (비워두기)
+Output Directory: public ✅
+Install Command: npm install ✅
+4-3: 환경변수 설정 (중요!)
+Environment Variables 섹션에서 5개 변수 추가:
+
+Name: NAVER_CLIENT_ID
+Value: [1단계에서 복사한 네이버 클라이언트 ID]
+Environment: Production ✅ Preview ✅ Development ✅
+
+Name: NAVER_CLIENT_SECRET  
+Value: [1단계에서 복사한 네이버 클라이언트 시크릿]
+Environment: Production ✅ Preview ✅ Development ✅
+
+Name: COUPANG_ACCESS_KEY
+Value: [1단계에서 복사한 쿠팡 액세스 키]
+Environment: Production ✅ Preview ✅ Development ✅
+
+Name: COUPANG_SECRET_KEY
+Value: [1단계에서 복사한 쿠팡 시크릿 키]
+Environment: Production ✅ Preview ✅ Development ✅
+
+Name: COUPANG_VENDOR_ID
+Value: [1단계에서 복사한 쿠팡 벤더 ID]
+Environment: Production ✅ Preview ✅ Development ✅
