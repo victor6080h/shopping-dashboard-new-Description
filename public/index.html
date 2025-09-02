@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PLAY.G 쇼핑분석 - 실제 상품 연동</title>
+    <title>PLAY.G 쇼핑분석 - 실제 상품 정보</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        /* 기존 CSS 동일... */
         * {
             margin: 0;
             padding: 0;
@@ -63,17 +62,12 @@
             margin: 10px 5px;
         }
         
-        .api-status.pending {
-            background: linear-gradient(45deg, #f59e0b, #d97706);
+        .api-status.error {
+            background: linear-gradient(45deg, #ef4444, #dc2626);
         }
         
-        .controls {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 20px;
+        .api-status.warning {
+            background: linear-gradient(45deg, #f59e0b, #d97706);
         }
         
         .platform-tabs {
@@ -81,24 +75,33 @@
             background: #f3f4f6;
             border-radius: 12px;
             padding: 4px;
+            justify-content: center;
+            margin-bottom: 30px;
         }
         
         .platform-tab {
-            padding: 12px 24px;
+            padding: 15px 30px;
             border: none;
             background: none;
             border-radius: 8px;
             cursor: pointer;
             font-weight: 600;
             transition: all 0.3s ease;
-            font-size: 14px;
-            position: relative;
+            font-size: 16px;
         }
         
         .platform-tab.active {
             background: #4f46e5;
             color: white;
             box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+        }
+        
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+            padding: 20px 0;
         }
         
         .product-card {
@@ -111,106 +114,8 @@
         }
         
         .product-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 30px rgba(0,0,0,0.15);
-        }
-        
-        .product-image {
-            width: 100%;
-            height: 250px;
-            object-fit: cover;
-            cursor: pointer;
-            transition: transform 0.3s ease;
-        }
-        
-        .product-image:hover {
-            transform: scale(1.05);
-        }
-        
-        .product-title {
-            font-size: 16px;
-            font-weight: 600;
-            color: #1f2937;
-            margin-bottom: 10px;
-            line-height: 1.4;
-            cursor: pointer;
-            transition: color 0.3s ease;
-        }
-        
-        .product-title:hover {
-            color: #4f46e5;
-        }
-        
-        .btn-primary {
-            background: #4f46e5;
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            width: 100%;
-            margin-bottom: 10px;
-        }
-        
-        .btn-primary:hover {
-            background: #4338ca;
-            transform: translateY(-2px);
-        }
-        
-        .btn-secondary {
-            background: #f3f4f6;
-            color: #374151;
-            border: 2px solid #e5e7eb;
-            padding: 12px 20px;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            width: 100%;
-        }
-        
-        .btn-secondary:hover {
-            background: #e5e7eb;
-            border-color: #d1d5db;
-        }
-        
-        .products-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 25px;
-            margin-bottom: 40px;
-        }
-        
-        .product-info {
-            padding: 20px;
-        }
-        
-        .product-price {
-            font-size: 20px;
-            font-weight: 800;
-            color: #ef4444;
-            margin-bottom: 10px;
-        }
-        
-        .product-meta {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            font-size: 14px;
-            color: #6b7280;
-        }
-        
-        .rating {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-        
-        .stars {
-            color: #fbbf24;
+            transform: translateY(-8px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.15);
         }
         
         .rank-badge {
@@ -227,16 +132,164 @@
             box-shadow: 0 2px 10px rgba(0,0,0,0.2);
         }
         
+        .rank-badge.top10 {
+            background: linear-gradient(45deg, #ff9a9e, #fecfef);
+        }
+        
+        .rank-badge.top50 {
+            background: linear-gradient(45deg, #a8edea, #fed6e3);
+        }
+        
+        .product-image {
+            width: 100%;
+            height: 280px;
+            object-fit: cover;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        
+        .product-image:hover {
+            transform: scale(1.05);
+        }
+        
+        .product-info {
+            padding: 25px;
+        }
+        
+        .product-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 12px;
+            line-height: 1.4;
+            cursor: pointer;
+            transition: color 0.3s ease;
+            height: 50px;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+        
+        .product-title:hover {
+            color: #4f46e5;
+        }
+        
+        .product-price {
+            font-size: 24px;
+            font-weight: 800;
+            color: #ef4444;
+            margin-bottom: 15px;
+        }
+        
+        .original-price {
+            text-decoration: line-through;
+            color: #9ca3af;
+            font-size: 16px;
+            margin-left: 10px;
+            font-weight: 400;
+        }
+        
+        .discount-badge {
+            background: #ef4444;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            margin-left: 10px;
+        }
+        
+        .product-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #6b7280;
+        }
+        
+        .rating {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .stars {
+            color: #fbbf24;
+            font-size: 16px;
+        }
+        
+        .platform-badge {
+            background: #4f46e5;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        .coupang-badge {
+            background: #ff6600;
+        }
+        
+        .rocket-badge {
+            background: #00c73c;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            margin-left: 5px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(45deg, #4f46e5, #7c3aed);
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            border-radius: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(79, 70, 229, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #f8fafc;
+            color: #475569;
+            border: 2px solid #e2e8f0;
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            font-size: 14px;
+        }
+        
+        .btn-secondary:hover {
+            background: #e2e8f0;
+            border-color: #cbd5e1;
+        }
+        
         .loading {
             text-align: center;
-            padding: 60px 20px;
+            padding: 80px 20px;
             color: #6b7280;
         }
         
         .loading i {
-            font-size: 3rem;
+            font-size: 4rem;
             margin-bottom: 20px;
             animation: spin 1s linear infinite;
+            color: #4f46e5;
         }
         
         @keyframes spin {
@@ -244,24 +297,53 @@
             to { transform: rotate(360deg); }
         }
         
-        .error-message {
-            background: #fef2f2;
-            border: 1px solid #fecaca;
-            color: #dc2626;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 20px 0;
+        .status-message {
             text-align: center;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 12px;
+            font-weight: 600;
         }
         
-        .success-message {
-            background: #f0fdf4;
-            border: 1px solid #bbf7d0;
-            color: #166534;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 20px 0;
+        .status-success {
+            background: linear-gradient(45deg, #10b981, #34d399);
+            color: white;
+        }
+        
+        .status-error {
+            background: linear-gradient(45deg, #ef4444, #f87171);
+            color: white;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 25px;
+            border-radius: 16px;
             text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            min-width: 150px;
+        }
+        
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: #4f46e5;
+            margin-bottom: 8px;
+        }
+        
+        .stat-label {
+            color: #6b7280;
+            font-size: 14px;
+            font-weight: 600;
         }
     </style>
 </head>
@@ -269,26 +351,23 @@
     <header class="header">
         <div class="container">
             <div class="logo">
-                <h1><i class="fas fa-chart-line"></i> PLAY.G 쇼핑분석</h1>
-                <p>실제 상품 연동 - 정확한 구매링크 제공</p>
+                <h1><i class="fas fa-shopping-bag"></i> PLAY.G 쇼핑분석</h1>
+                <p>실제 상품 정보 · 정확한 가격 · 진짜 구매링크</p>
                 <div>
-                    <span class="api-status" id="naverStatus">네이버 API: 연결중...</span>
-                    <span class="api-status pending" id="coupangStatus">쿠팡 API: 승인대기</span>
+                    <span class="api-status" id="apiStatus">API 연결 확인중...</span>
                 </div>
             </div>
             
-            <div class="controls">
-                <div class="platform-tabs">
-                    <button class="platform-tab active" data-platform="naver">
-                        <i class="fas fa-shopping-cart"></i> 네이버쇼핑
-                    </button>
-                    <button class="platform-tab" data-platform="coupang">
-                        <i class="fas fa-rocket"></i> 쿠팡
-                    </button>
-                    <button class="platform-tab" data-platform="other">
-                        <i class="fas fa-store"></i> 기타플랫폼
-                    </button>
-                </div>
+            <div class="platform-tabs">
+                <button class="platform-tab active" data-platform="naver">
+                    <i class="fas fa-shopping-cart"></i> 네이버쇼핑
+                </button>
+                <button class="platform-tab" data-platform="coupang">
+                    <i class="fas fa-rocket"></i> 쿠팡
+                </button>
+                <button class="platform-tab" data-platform="other">
+                    <i class="fas fa-store"></i> 기타몰
+                </button>
             </div>
         </div>
     </header>
@@ -297,10 +376,25 @@
         <div class="container">
             <div id="statusMessage"></div>
             
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalProducts">0</div>
+                    <div class="stat-label">실제 상품</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="avgRating">0</div>
+                    <div class="stat-label">평균 평점</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="avgDiscount">0%</div>
+                    <div class="stat-label">평균 할인율</div>
+                </div>
+            </div>
+            
             <div class="loading" id="loadingIndicator">
                 <i class="fas fa-spinner"></i>
-                <h3>실제 상품 데이터를 불러오는 중...</h3>
-                <p>정확한 가격과 링크를 확인하고 있습니다</p>
+                <h2>실제 상품 데이터 로딩중...</h2>
+                <p>정확한 상품 정보를 가져오고 있습니다</p>
             </div>
             
             <div class="products-grid" id="productsGrid"></div>
@@ -341,6 +435,7 @@
         // 실제 상품 데이터 로드
         async function loadProducts() {
             showLoading(true);
+            updateAPIStatus('연결 시도중...', 'warning');
             
             try {
                 let apiUrl;
@@ -356,23 +451,27 @@
                         break;
                 }
                 
+                console.log(`API 호출: ${apiUrl}`);
                 const response = await fetch(apiUrl);
                 const data = await response.json();
                 
-                if (data.success) {
-                    allProducts = data.products || [];
-                    showStatusMessage(`✅ ${data.products.length}개 실제 상품 로드 완료`, 'success');
-                    updateAPIStatus(currentPlatform, true);
+                console.log('API 응답:', data);
+                
+                if (data.success && data.products && data.products.length > 0) {
+                    allProducts = data.products;
+                    showStatusMessage(`✅ ${data.products.length}개 실제 상품 로드 완료!`, 'success');
+                    updateAPIStatus(`${currentPlatform} 연결됨`, 'success');
+                    updateStats();
                 } else {
-                    throw new Error(data.error || 'API 응답 오류');
+                    throw new Error(data.error || '상품 데이터가 없습니다');
                 }
                 
                 renderProducts();
                 
             } catch (error) {
                 console.error('상품 로드 실패:', error);
-                showStatusMessage(`❌ API 연동 실패: ${error.message}`, 'error');
-                updateAPIStatus(currentPlatform, false);
+                showStatusMessage(`❌ ${currentPlatform} 연동 실패: ${error.message}`, 'error');
+                updateAPIStatus(`${currentPlatform} 연결 실패`, 'error');
                 allProducts = [];
                 renderProducts();
             }
@@ -386,7 +485,8 @@
             
             if (allProducts.length === 0) {
                 grid.innerHTML = `
-                    <div class="loading">
+                    <div class="loading" style="display: block; grid-column: 1 / -1;">
+                        <i class="fas fa-exclamation-triangle"></i>
                         <h3>상품을 불러올 수 없습니다</h3>
                         <p>API 연동을 확인해주세요</p>
                     </div>
@@ -396,68 +496,118 @@
             
             grid.innerHTML = allProducts.slice(0, 100).map(product => `
                 <div class="product-card">
-                    <div class="rank-badge">${product.rank}위</div>
+                    <div class="rank-badge ${getRankClass(product.rank)}">${product.rank}위</div>
+                    
                     <img src="${product.image}" 
                          alt="${product.title}" 
                          class="product-image"
-                         onclick="openProductLink('${product.link}', '${product.platform}')"
-                         onerror="handleImageError(this)">
+                         onclick="openProductLink('${product.link}', '${product.title}')"
+                         onerror="handleImageError(this, '${product.platform}')">
                     
                     <div class="product-info">
-                        <h3 class="product-title" onclick="openProductLink('${product.link}', '${product.platform}')">${product.title}</h3>
+                        <h3 class="product-title" onclick="openProductLink('${product.link}', '${product.title}')" title="${product.title}">
+                            ${product.title}
+                        </h3>
+                        
                         <div class="product-price">
                             ${formatPrice(product.price)}원
-                            ${product.discountRate ? `<small style="text-decoration: line-through; color: #888; margin-left: 8px;">${formatPrice(product.originalPrice)}원</small>` : ''}
+                            ${product.originalPrice && product.originalPrice > product.price ? 
+                                `<span class="original-price">${formatPrice(product.originalPrice)}원</span>
+                                 <span class="discount-badge">${product.discountRate}%</span>` : ''}
                         </div>
                         
                         <div class="product-meta">
                             <div class="rating">
                                 <span class="stars">${'★'.repeat(Math.floor(product.rating))}</span>
                                 <span>${product.rating}</span>
-                                <span>(${product.reviewCount.toLocaleString()})</span>
+                                <span>(${formatNumber(product.reviewCount)})</span>
                             </div>
-                            <div class="mall">${product.mall}</div>
+                            <div>
+                                <span class="platform-badge ${currentPlatform === 'coupang' ? 'coupang-badge' : ''}">${product.mall}</span>
+                                ${product.isRocket ? '<span class="rocket-badge">🚀</span>' : ''}
+                            </div>
                         </div>
                         
-                        <button class="btn-primary" onclick="openProductLink('${product.link}', '${product.platform}')">
-                            <i class="fas fa-shopping-cart"></i> 실제 상품 구매하기
+                        <button class="btn-primary" onclick="openProductLink('${product.link}', '${product.title}')">
+                            <i class="fas fa-external-link-alt"></i> 실제 상품 구매하기
                         </button>
-                        <button class="btn-secondary" onclick="showAnalysis('${product.title}', ${product.rank})">
-                            <i class="fas fa-chart-bar"></i> 분석보고서
+                        <button class="btn-secondary" onclick="showProductInfo('${product.title}', ${product.rank}, '${product.brand}')">
+                            <i class="fas fa-info-circle"></i> 상품 정보
                         </button>
                     </div>
                 </div>
             `).join('');
         }
 
+        // 순위 클래스 가져오기
+        function getRankClass(rank) {
+            if (rank <= 10) return 'top10';
+            if (rank <= 50) return 'top50';
+            return '';
+        }
+
         // 실제 상품 링크 열기
-        function openProductLink(url, platform) {
-            if (!url || url === 'undefined') {
-                alert('상품 링크가 유효하지 않습니다.');
+        function openProductLink(url, title) {
+            if (!url || url === 'undefined' || url === 'null') {
+                alert('죄송합니다. 해당 상품의 링크를 찾을 수 없습니다.');
                 return;
             }
 
             // URL 유효성 검사
             if (url.startsWith('http://') || url.startsWith('https://')) {
+                // 링크 클릭 추적
+                console.log(`상품 클릭: ${title} - ${url}`);
+                
                 // 실제 상품 페이지로 이동
                 window.open(url, '_blank', 'noopener,noreferrer');
                 
-                // 클릭 추적 (옵션)
-                console.log(`${platform} 상품 클릭:`, url);
+                // 사용자에게 피드백
+                showToast('상품 페이지로 이동합니다!');
             } else {
-                alert(`${platform} 상품 링크 오류: 올바르지 않은 URL입니다.`);
+                alert('올바르지 않은 상품 링크입니다.');
+                console.error('잘못된 URL:', url);
             }
         }
 
-        // 이미지 로드 실패 처리
-        function handleImageError(img) {
-            img.src = 'https://via.placeholder.com/300x250/f3f4f6/9ca3af?text=이미지+없음';
-            img.alt = '이미지 없음';
+        // 상품 정보 표시
+        function showProductInfo(title, rank, brand) {
+            alert(`📦 상품 정보\n\n📌 상품명: ${title}\n🏆 순위: ${rank}위\n🏷️ 브랜드: ${brand}\n\n더 자세한 정보는 상품 페이지에서 확인하세요!`);
+        }
+
+        // 이미지 오류 처리
+        function handleImageError(img, platform) {
+            const placeholders = {
+                naver: 'https://shopping-phinf.pstatic.net/main_2736037/27360370478.20230801143317.jpg',
+                coupang: 'https://thumbnail6.coupangcdn.com/thumbnails/remote/300x300ex/image/retail/images/placeholder.jpg',
+                other: 'https://via.placeholder.com/300x250/f8fafc/64748b?text=상품+이미지'
+            };
+            
+            img.src = placeholders[platform] || placeholders.other;
+            img.alt = '상품 이미지 로드 실패';
         }
 
         // 가격 포맷팅
         function formatPrice(price) {
             return parseInt(price).toLocaleString();
+        }
+
+        // 숫자 포맷팅
+        function formatNumber(num) {
+            if (num >= 10000) return Math.floor(num / 1000) + 'k';
+            if (num >= 1000) return (num / 1000).toFixed(1) + 'k';
+            return num.toString();
+        }
+
+        // 통계 업데이트
+        function updateStats() {
+            if (allProducts.length > 0) {
+                const avgRating = (allProducts.reduce((sum, p) => sum + parseFloat(p.rating), 0) / allProducts.length).toFixed(1);
+                const avgDiscount = Math.round(allProducts.reduce((sum, p) => sum + (p.discountRate || 0), 0) / allProducts.length);
+                
+                document.getElementById('totalProducts').textContent = allProducts.length;
+                document.getElementById('avgRating').textContent = avgRating;
+                document.getElementById('avgDiscount').textContent = avgDiscount + '%';
+            }
         }
 
         // 로딩 표시
@@ -469,7 +619,7 @@
         // 상태 메시지 표시
         function showStatusMessage(message, type) {
             const statusDiv = document.getElementById('statusMessage');
-            statusDiv.className = type === 'success' ? 'success-message' : 'error-message';
+            statusDiv.className = `status-message status-${type}`;
             statusDiv.textContent = message;
             statusDiv.style.display = 'block';
             
@@ -479,23 +629,40 @@
         }
 
         // API 상태 업데이트
-        function updateAPIStatus(platform, connected) {
-            const statusElement = document.getElementById(`${platform}Status`);
-            if (statusElement) {
-                statusElement.textContent = `${platform} API: ${connected ? '연결됨' : '연결실패'}`;
-                statusElement.className = connected ? 'api-status' : 'api-status pending';
-            }
+        function updateAPIStatus(message, status) {
+            const statusElement = document.getElementById('apiStatus');
+            statusElement.textContent = message;
+            statusElement.className = `api-status ${status}`;
         }
 
-        // 분석보고서 표시 (기존 함수 유지)
-        function showAnalysis(productTitle, rank) {
-            alert(`${productTitle}의 상세 분석보고서\n순위: ${rank}위\n\n분석 기능은 추후 업데이트됩니다.`);
+        // 토스트 메시지
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #10b981;
+                color: white;
+                padding: 15px 20px;
+                border-radius: 8px;
+                z-index: 10000;
+                font-weight: 600;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            `;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
         }
 
-        // 주기적 데이터 업데이트 (10분마다)
+        // 자동 새로고침 (5분마다)
         setInterval(() => {
+            console.log('자동 새로고침...');
             loadProducts();
-        }, 600000);
+        }, 300000);
     </script>
 </body>
 </html>
