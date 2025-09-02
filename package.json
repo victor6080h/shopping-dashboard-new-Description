@@ -1,15 +1,17 @@
 {
-  "name": "shopping-dashboard-new",
+  "name": "playg-shopping-dashboard",
   "version": "1.0.0",
-  "description": "네이버/쿠팡/기타 1~200위 실시간 쇼핑 대시보드",
+  "description": "PLAY.G 실시간 쇼핑분석 대시보드",
+  "main": "index.js",
   "scripts": {
-    "dev": "vercel dev",
+    "build": "echo 'Build complete'",
     "start": "vercel dev"
   },
-  "license": "MIT",
-  "devDependencies": {
-    "@vercel/node": "^3.0.0",
-    "@vercel/static": "^1.0.0"
+  "dependencies": {
+    "axios": "^1.6.0",
+    "crypto": "^1.0.1"
   },
-  "engines": { "node": ">=18" }
+  "engines": {
+    "node": "18.x"
+  }
 }
