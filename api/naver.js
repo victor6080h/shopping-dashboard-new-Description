@@ -2,7 +2,7 @@ export default async function handler(req, res) {
     // CORS 헤더 설정
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     res.setHeader('Content-Type', 'application/json');
     
     if (req.method === 'OPTIONS') {
@@ -21,27 +21,56 @@ export default async function handler(req, res) {
         if (!clientId || !clientSecret) {
             return res.status(500).json({
                 success: false,
-                error: '네이버 API 키가 설정되지 않았습니다'
+                error: '네이버 API 키가 설정되지 않았습니다',
+                debug: { hasClientId: !!clientId, hasClientSecret: !!clientSecret }
             });
         }
 
-        const { category = '패션', start = 1, display = 20 } = req.query;
+        const { category = '패션의류', sortType = 'sim', start = 1, display = 100 } = req.query;
         
-        // URL 파라미터 구성
+        // 카테고리별 검색 키워드 매핑
+        const categoryKeywords = {
+            '패션의류': '패션 의류',
+            '화장품/뷰티': '화장품',
+            '디지털/가전': '스마트폰',
+            '생활용품': '생활용품',
+            '식품/건강식품': '건강식품',
+            '도서/음반': '도서',
+            '스포츠/레저': '운동용품',
+            '자동차용품': '자동차',
+            '유아/아동': '유아용품',
+            '반려동물': '펫샵',
+            '홈인테리어': '인테리어',
+            '문구/오피스': '문구'
+        };
+
+        const searchKeyword = categoryKeywords[category] || category;
+        
+        // 정렬 방식 설정 (실시간 인기순 vs 추천순)
+        const sortMap = {
+            'popularity': 'sim',    // 실시간 인기순 (정확도순)
+            'recommend': 'date',    // 추천순 (최신순) 
+            'price_asc': 'asc',     // 가격 낮은순
+            'price_desc': 'dsc'     // 가격 높은순
+        };
+        
+        const naverSort = sortMap[sortType] || 'sim';
+
+        // 네이버 쇼핑 API 호출
         const params = new URLSearchParams({
-            query: category,
+            query: searchKeyword,
             start: parseInt(start),
             display: Math.min(parseInt(display), 100),
-            sort: 'sim'
+            sort: naverSort
         });
 
-        // 네이버 API 호출 (헤더 최적화)
         const apiUrl = `https://openapi.naver.com/v1/search/shop.json?${params}`;
         
         console.log('네이버 API 호출:', {
-            url: apiUrl,
-            clientId: clientId.substring(0, 8) + '...',
-            timestamp: new Date().toISOString()
+            keyword: searchKeyword,
+            category: category,
+            sort: naverSort,
+            url: apiUrl
         });
 
         const response = await fetch(apiUrl, {
@@ -49,48 +78,22 @@ export default async function handler(req, res) {
             headers: {
                 'X-Naver-Client-Id': clientId,
                 'X-Naver-Client-Secret': clientSecret,
-                'User-Agent': 'Mozilla/5.0 (compatible; ShoppingDashboard/1.0; +https://shopping-dashboard-new.vercel.app)',
-                'Accept': 'application/json',
-                'Accept-Language': 'ko-KR,ko;q=0.9,en;q=0.8'
-            },
-            timeout: 10000
+                'User-Agent': 'Mozilla/5.0 (compatible; PLAYG-Shopping/1.0)',
+                'Accept': 'application/json'
+            }
         });
 
-        console.log('네이버 API 응답:', {
-            status: response.status,
-            statusText: response.statusText,
-            headers: Object.fromEntries(response.headers.entries())
-        });
-
-        // 응답 처리
         if (!response.ok) {
             const errorText = await response.text();
-            console.error('네이버 API 오류 상세:', {
-                status: response.status,
-                statusText: response.statusText,
-                body: errorText,
-                url: apiUrl
-            });
-
-            // 401 오류인 경우 특별 처리
-            if (response.status === 401) {
-                return res.status(401).json({
-                    success: false,
-                    error: '네이버 API 인증 실패',
-                    details: '개발자 센터에서 서비스 URL 설정을 확인해주세요',
-                    troubleshoot: {
-                        step1: '네이버 개발자센터 > 내 애플리케이션 접속',
-                        step2: '서비스 URL에 https://shopping-dashboard-new.vercel.app 추가',
-                        step3: '쇼핑 API 사용 설정 확인'
-                    },
-                    apiResponse: errorText
-                });
-            }
-
+            console.error('네이버 API 오류:', response.status, errorText);
+            
             return res.status(response.status).json({
                 success: false,
                 error: `네이버 API 오류: ${response.status}`,
-                details: errorText
+                details: errorText,
+                troubleshoot: response.status === 401 ? 
+                    '네이버 개발자센터에서 서비스 URL 설정을 확인해주세요' : 
+                    '네이버 API 호출 중 오류가 발생했습니다'
             });
         }
 
@@ -100,43 +103,69 @@ export default async function handler(req, res) {
             itemCount: data.items?.length || 0
         });
         
-        // 데이터 정제
-        const items = (data.items || []).map((item, index) => ({
-            rank: parseInt(start) + index,
-            title: item.title?.replace(/<[^>]*>/g, '').trim() || '제목 없음',
-            price: item.lprice && parseInt(item.lprice) > 0 ? 
-                   `${parseInt(item.lprice).toLocaleString()}원` : 
-                   (item.hprice && parseInt(item.hprice) > 0 ? 
-                    `${parseInt(item.hprice).toLocaleString()}원` : '가격 정보 없음'),
-            link: item.link || '',
-            image: item.image || '',
-            mallName: item.mallName || '네이버쇼핑',
-            brand: item.brand || '',
-            category: category,
-            maker: item.maker || ''
-        }));
+        // 데이터 정제 및 순위 부여
+        const items = (data.items || []).map((item, index) => {
+            // 가격 정보 정확하게 처리
+            let finalPrice = '';
+            let originalPrice = '';
+            let discountRate = 0;
+            
+            if (item.lprice && parseInt(item.lprice) > 0) {
+                finalPrice = parseInt(item.lprice);
+                if (item.hprice && parseInt(item.hprice) > finalPrice) {
+                    originalPrice = parseInt(item.hprice);
+                    discountRate = Math.round(((originalPrice - finalPrice) / originalPrice) * 100);
+                }
+            } else if (item.hprice && parseInt(item.hprice) > 0) {
+                finalPrice = parseInt(item.hprice);
+            }
+
+            // 상품명 정확하게 정제
+            const cleanTitle = item.title
+                ?.replace(/<[^>]*>/g, '')      // HTML 태그 제거
+                ?.replace(/&lt;/g, '<')        // HTML 엔티티 복원
+                ?.replace(/&gt;/g, '>')
+                ?.replace(/&amp;/g, '&')
+                ?.replace(/&quot;/g, '"')
+                ?.replace(/&#39;/g, "'")
+                ?.trim() || '상품명 없음';
+
+            return {
+                rank: parseInt(start) + index,
+                productName: cleanTitle,
+                category: category,
+                brand: item.brand?.trim() || '',
+                price: finalPrice ? finalPrice.toLocaleString() + '원' : '가격 문의',
+                originalPrice: originalPrice ? originalPrice.toLocaleString() + '원' : '',
+                discountRate: discountRate,
+                productUrl: item.link || '',  // 실제 구매 링크
+                imageUrl: item.image || '',
+                mallName: item.mallName?.trim() || '네이버쇼핑',
+                maker: item.maker?.trim() || '',
+                productId: item.productId || '',
+                categoryId: item.category1 || '',
+                platform: 'naver'
+            };
+        });
 
         return res.status(200).json({
             success: true,
             platform: 'naver',
+            platformName: '네이버쇼핑',
             category: category,
+            sortType: sortType,
+            sortName: sortType === 'popularity' ? '실시간 인기순' : '추천순',
             total: data.total || 0,
             count: items.length,
             items: items,
-            timestamp: new Date().toISOString(),
-            debug: {
-                apiCalled: true,
-                responseStatus: response.status
-            }
+            timestamp: new Date().toISOString()
         });
 
     } catch (error) {
         console.error('네이버 API 전체 오류:', error);
-        
         return res.status(500).json({
             success: false,
             error: error.message,
-            type: error.name,
             timestamp: new Date().toISOString()
         });
     }
