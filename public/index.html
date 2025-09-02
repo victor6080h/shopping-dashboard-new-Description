@@ -3,243 +3,564 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🛒 실시간 쇼핑 인기순위</title>
+    <title>🏆 PLAY.G 쇼핑 분석 대시보드</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
             font-family: 'Segoe UI', Arial, sans-serif; 
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh; padding: 20px;
+            min-height: 100vh; color: #333;
         }
         .container { 
-            max-width: 1200px; margin: 0 auto; background: white; 
+            max-width: 1400px; margin: 0 auto; background: white; 
             border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.1); 
-            overflow: hidden;
+            overflow: hidden; margin: 20px auto;
         }
         .header { 
             background: linear-gradient(135deg, #ff6b6b, #ee5a24); 
-            color: white; padding: 30px; text-align: center;
+            color: white; padding: 20px 30px; text-align: center;
         }
-        .header h1 { font-size: 2.5em; margin-bottom: 10px; }
-        .controls { 
-            padding: 20px; background: #f8f9fa; display: flex; 
-            gap: 15px; align-items: center; flex-wrap: wrap;
+        .header h1 { font-size: 2.2em; margin-bottom: 5px; }
+        .header p { font-size: 1.1em; opacity: 0.9; }
+
+        .main-controls { 
+            padding: 20px 30px; background: #f8f9fa; display: flex; 
+            gap: 15px; align-items: center; flex-wrap: wrap; border-bottom: 1px solid #e9ecef;
         }
+        .control-group { display: flex; align-items: center; gap: 8px; }
+        .control-group label { font-weight: 600; color: #495057; font-size: 14px; }
         select, button { 
-            padding: 10px 15px; border: 2px solid #e9ecef; 
-            border-radius: 8px; font-size: 14px;
+            padding: 8px 12px; border: 2px solid #e9ecef; 
+            border-radius: 6px; font-size: 13px; transition: all 0.3s;
         }
-        button { 
+        select:focus { outline: none; border-color: #007bff; }
+        
+        .action-buttons { margin-left: auto; display: flex; gap: 10px; }
+        .btn-primary { 
             background: #28a745; color: white; border: none; 
-            cursor: pointer; font-weight: 600;
+            cursor: pointer; font-weight: 600; padding: 10px 20px;
         }
-        button:hover { background: #218838; }
-        .tabs { display: flex; background: #f8f9fa; }
+        .btn-primary:hover { background: #218838; transform: translateY(-1px); }
+        .btn-secondary { 
+            background: #17a2b8; color: white; border: none; 
+            cursor: pointer; font-weight: 600; padding: 10px 20px;
+        }
+        .btn-secondary:hover { background: #138496; }
+
+        .tab-container { display: flex; background: #f8f9fa; }
         .tab { 
-            flex: 1; padding: 15px; background: #e9ecef; 
-            border: none; cursor: pointer; font-size: 16px; font-weight: 600;
+            flex: 1; padding: 15px; background: #e9ecef; border: none; 
+            cursor: pointer; font-size: 15px; font-weight: 600; transition: all 0.3s;
         }
         .tab.active { background: white; color: #007bff; border-bottom: 3px solid #007bff; }
-        .content { display: none; padding: 30px; }
+        .tab:hover:not(.active) { background: #dee2e6; }
+
+        .content { display: none; }
         .content.active { display: block; }
-        .status { 
-            padding: 15px; background: #f8f9fa; border-radius: 8px; 
-            margin-bottom: 20px; text-align: center;
+
+        /* 랭킹 테이블 스타일 */
+        .ranking-section { padding: 20px; }
+        .stats-bar { 
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 15px; background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-radius: 8px; margin-bottom: 20px;
         }
-        .products { 
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
-            gap: 20px;
+        .stats-info { display: flex; gap: 30px; }
+        .stat-item { text-align: center; }
+        .stat-number { font-size: 1.4em; font-weight: bold; color: #007bff; }
+        .stat-label { font-size: 0.85em; color: #6c757d; margin-top: 3px; }
+
+        .ranking-table { 
+            width: 100%; border-collapse: collapse; margin-top: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
-        .product { 
-            border: 1px solid #e9ecef; border-radius: 12px; 
-            overflow: hidden; transition: transform 0.3s; cursor: pointer;
+        .ranking-table th { 
+            background: #343a40; color: white; padding: 12px 8px; 
+            text-align: left; font-size: 13px; position: sticky; top: 0; z-index: 10;
         }
-        .product:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-        .product-rank { 
+        .ranking-table td { 
+            padding: 10px 8px; border-bottom: 1px solid #e9ecef; font-size: 12px;
+        }
+        .ranking-table tbody tr:hover { background: #f8f9fa; }
+        .rank-badge { 
             background: linear-gradient(135deg, #ff6b6b, #ee5a24); 
-            color: white; padding: 8px 15px; font-weight: bold;
+            color: white; padding: 4px 8px; border-radius: 12px; 
+            font-weight: bold; display: inline-block; min-width: 30px; text-align: center;
         }
-        .product-image { 
-            width: 100%; height: 180px; background: #f8f9fa; 
-            display: flex; align-items: center; justify-content: center;
+        .rank-badge.top3 { background: linear-gradient(135deg, #ffd700, #ffb700); }
+        .price { font-weight: bold; color: #e74c3c; }
+        .rating { color: #f39c12; font-weight: bold; }
+
+        /* 분석 보고서 스타일 */
+        .analysis-section { padding: 20px; max-height: 70vh; overflow-y: auto; }
+        .report-header { 
+            text-align: center; padding: 20px; background: #f8f9fa; 
+            border-radius: 8px; margin-bottom: 20px;
         }
-        .product-image img { width: 100%; height: 100%; object-fit: cover; }
-        .product-info { padding: 15px; }
-        .product-title { font-weight: 600; margin-bottom: 8px; line-height: 1.4; }
-        .product-price { 
-            font-size: 1.2em; font-weight: bold; color: #e74c3c; margin-bottom: 8px;
+        .report-section { 
+            margin-bottom: 25px; padding: 20px; background: white; 
+            border: 1px solid #e9ecef; border-radius: 8px;
         }
-        .product-meta { display: flex; justify-content: space-between; font-size: 0.9em; color: #6c757d; }
+        .report-section h3 { 
+            color: #495057; border-bottom: 2px solid #007bff; 
+            padding-bottom: 8px; margin-bottom: 15px;
+        }
+        .insight-grid { 
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
+            gap: 15px; margin: 15px 0;
+        }
+        .insight-card { 
+            padding: 15px; background: #f8f9fa; border-radius: 6px; 
+            border-left: 4px solid #007bff;
+        }
+        .insight-card h4 { color: #495057; margin-bottom: 8px; font-size: 14px; }
+        .insight-card p { font-size: 13px; line-height: 1.4; }
+
         .loading { text-align: center; padding: 40px; }
         .loading-spinner { 
             width: 40px; height: 40px; border: 4px solid #f3f3f3; 
             border-top: 4px solid #007bff; border-radius: 50%; 
-            animation: spin 1s linear infinite; margin: 0 auto 20px;
+            animation: spin 1s linear infinite; margin: 0 auto 15px;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
         .error { 
             background: #f8d7da; color: #721c24; padding: 20px; 
-            border-radius: 8px; margin: 20px;
+            border-radius: 8px; margin: 20px; border: 1px solid #f5c6cb;
         }
+
         @media (max-width: 768px) {
-            .products { grid-template-columns: 1fr; }
-            .controls { flex-direction: column; align-items: stretch; }
+            .main-controls { flex-direction: column; align-items: stretch; }
+            .action-buttons { margin-left: 0; justify-content: center; }
+            .stats-info { flex-direction: column; gap: 15px; text-align: center; }
+            .ranking-table { font-size: 11px; }
+            .ranking-table th, .ranking-table td { padding: 6px 4px; }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🛒 실시간 쇼핑 인기순위</h1>
-            <p>네이버쇼핑 & 쿠팡 베스트 상품을 실시간으로!</p>
+            <h1>🏆 고급 쇼핑 분석 대시보드</h1>
+            <p>판매순위 1-150위 & AI 제품 분석 보고서</p>
         </div>
 
-        <div class="controls">
-            <div>
+        <div class="main-controls">
+            <div class="control-group">
                 <label for="category">카테고리:</label>
                 <select id="category">
-                    <option value="패션">패션</option>
-                    <option value="화장품">화장품</option>
-                    <option value="디지털">디지털</option>
-                    <option value="가전">가전</option>
+                    <option value="전체">전체</option>
+                    <option value="패션의류">패션의류</option>
+                    <option value="화장품/뷰티">화장품/뷰티</option>
+                    <option value="디지털/가전">디지털/가전</option>
                     <option value="생활용품">생활용품</option>
-                    <option value="식품">식품</option>
+                    <option value="식품/건강식품">식품/건강식품</option>
+                    <option value="도서/음반">도서/음반</option>
+                    <option value="스포츠/레저">스포츠/레저</option>
+                    <option value="자동차용품">자동차용품</option>
+                    <option value="유아/아동">유아/아동</option>
+                    <option value="반려동물">반려동물</option>
+                    <option value="홈인테리어">홈인테리어</option>
                 </select>
             </div>
-            <div>
-                <label for="count">개수:</label>
-                <select id="count">
-                    <option value="20">20개</option>
-                    <option value="50">50개</option>
-                    <option value="100">100개</option>
+            
+            <div class="control-group">
+                <label for="platform">플랫폼:</label>
+                <select id="platform">
+                    <option value="all">전체</option>
+                    <option value="naver">네이버쇼핑</option>
+                    <option value="coupang">쿠팡</option>
+                    <option value="gmarket">지마켓</option>
+                    <option value="auction">옥션</option>
                 </select>
             </div>
-            <button onclick="loadData()">🔄 데이터 새로고침</button>
+
+            <div class="control-group">
+                <label for="rankingType">순위유형:</label>
+                <select id="rankingType">
+                    <option value="sales">판매순위</option>
+                    <option value="recommend">추천순위</option>
+                    <option value="review">리뷰순위</option>
+                    <option value="rating">평점순위</option>
+                </select>
+            </div>
+
+            <div class="action-buttons">
+                <button class="btn-primary" onclick="loadRankings()">🔄 데이터 새로고침</button>
+                <button class="btn-secondary" onclick="downloadExcel()">📊 엑셀 다운로드</button>
+            </div>
         </div>
 
-        <div class="tabs">
-            <button class="tab active" onclick="switchTab('naver')">네이버쇼핑 🟢</button>
-            <button class="tab" onclick="switchTab('coupang')">쿠팡 🧡</button>
+        <div class="tab-container">
+            <button class="tab active" onclick="switchTab('rankings')">🏆 순위 랭킹 (1-150위)</button>
+            <button class="tab" onclick="switchTab('analysis')">📊 제품 분석 보고서</button>
         </div>
 
-        <div id="naver-content" class="content active">
-            <div class="status" id="naver-status">네이버쇼핑 데이터를 불러오려면 '데이터 새로고침'을 클릭하세요</div>
-            <div class="products" id="naver-products"></div>
+        <!-- 순위 랭킹 섹션 -->
+        <div id="rankings-content" class="content active">
+            <div class="ranking-section">
+                <div class="stats-bar">
+                    <div class="stats-info">
+                        <div class="stat-item">
+                            <div class="stat-number" id="total-products">150</div>
+                            <div class="stat-label">전체 상품수</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number" id="avg-price">-</div>
+                            <div class="stat-label">평균 가격</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number" id="avg-rating">-</div>
+                            <div class="stat-label">평균 평점</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number" id="total-reviews">-</div>
+                            <div class="stat-label">총 리뷰수</div>
+                        </div>
+                    </div>
+                    <div style="text-align: right; color: #6c757d; font-size: 0.85em;">
+                        <div>마지막 업데이트</div>
+                        <div id="last-updated">-</div>
+                    </div>
+                </div>
+
+                <div style="overflow-x: auto;">
+                    <table class="ranking-table">
+                        <thead>
+                            <tr>
+                                <th>순위</th>
+                                <th>상품명</th>
+                                <th>카테고리</th>
+                                <th>브랜드</th>
+                                <th>가격</th>
+                                <th>할인율</th>
+                                <th>평점</th>
+                                <th>리뷰</th>
+                                <th>판매량</th>
+                                <th>판매자</th>
+                                <th>플랫폼</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ranking-table-body">
+                            <!-- 데이터가 여기에 들어갑니다 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
 
-        <div id="coupang-content" class="content">
-            <div class="status" id="coupang-status">쿠팡 데이터를 불러오려면 '데이터 새로고침'을 클릭하세요</div>
-            <div class="products" id="coupang-products"></div>
+        <!-- 제품 분석 보고서 섹션 -->
+        <div id="analysis-content" class="content">
+            <div class="analysis-section">
+                <div class="report-header">
+                    <h2>🔍 AI 제품 분석 보고서</h2>
+                    <p>시장 포지셔닝부터 신제품 출시 전략까지 종합 분석</p>
+                    <div style="margin-top: 15px;">
+                        <input type="text" id="product-name" placeholder="분석할 제품명을 입력하세요" 
+                               style="padding: 10px; width: 300px; border: 2px solid #e9ecef; border-radius: 6px;">
+                        <button class="btn-primary" onclick="generateAnalysis()" style="margin-left: 10px;">
+                            🚀 분석 시작
+                        </button>
+                    </div>
+                </div>
+
+                <div id="analysis-report">
+                    <div style="text-align: center; padding: 40px; color: #6c757d;">
+                        <h3>제품명을 입력하고 '분석 시작' 버튼을 클릭하세요</h3>
+                        <p>AI가 종합적인 시장 분석 보고서를 생성해드립니다</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
-        let currentTab = 'naver';
+        let currentTab = 'rankings';
+        let currentData = null;
 
+        // 탭 전환
         function switchTab(tab) {
-            // 탭 활성화
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelector(`[onclick="switchTab('${tab}')"]`).classList.add('active');
             
-            // 콘텐츠 전환
             document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
             document.getElementById(`${tab}-content`).classList.add('active');
             
             currentTab = tab;
         }
 
-        async function loadData() {
+        // 랭킹 데이터 로드
+        async function loadRankings() {
             const category = document.getElementById('category').value;
-            const count = document.getElementById('count').value;
+            const platform = document.getElementById('platform').value;
+            const type = document.getElementById('rankingType').value;
             
-            // 네이버 데이터 로드
-            loadPlatformData('naver', category, count);
-            
-            // 쿠팡 데이터 로드
-            loadPlatformData('coupang', category, count);
-        }
-
-        async function loadPlatformData(platform, category, count) {
-            const statusEl = document.getElementById(`${platform}-status`);
-            const productsEl = document.getElementById(`${platform}-products`);
-            
-            // 로딩 표시
-            statusEl.innerHTML = `${platform === 'naver' ? '네이버쇼핑' : '쿠팡'} 데이터 로딩 중...`;
-            productsEl.innerHTML = '<div class="loading"><div class="loading-spinner"></div><p>데이터를 불러오는 중입니다...</p></div>';
+            const tableBody = document.getElementById('ranking-table-body');
+            tableBody.innerHTML = '<tr><td colspan="11" style="text-align: center; padding: 30px;"><div class="loading-spinner"></div>데이터를 불러오는 중...</td></tr>';
             
             try {
-                const params = new URLSearchParams({
-                    category: category,
-                    [platform === 'naver' ? 'display' : 'limit']: count
-                });
-                
-                const response = await fetch(`/api/${platform}?${params}`);
+                const response = await fetch(`/api/rankings?category=${encodeURIComponent(category)}&platform=${platform}&type=${type}`);
                 const data = await response.json();
                 
                 if (data.success) {
-                    statusEl.innerHTML = `
-                        <strong>${platform === 'naver' ? '네이버쇼핑' : '쿠팡'}</strong> | 
-                        카테고리: ${data.category} | 
-                        상품수: ${data.count}개 | 
-                        업데이트: ${new Date(data.timestamp).toLocaleString()}
-                    `;
-                    
-                    displayProducts(productsEl, data.items);
+                    currentData = data;
+                    displayRankings(data.rankings);
+                    updateStats(data.rankings);
+                    document.getElementById('last-updated').textContent = new Date(data.lastUpdated).toLocaleString();
                 } else {
-                    throw new Error(data.error || '알 수 없는 오류');
+                    throw new Error(data.error);
                 }
-                
             } catch (error) {
-                console.error(`${platform} 오류:`, error);
-                statusEl.innerHTML = `❌ ${platform === 'naver' ? '네이버쇼핑' : '쿠팡'} 데이터 로드 실패: ${error.message}`;
-                productsEl.innerHTML = `
-                    <div class="error">
-                        <h3>오류 발생</h3>
-                        <p>${error.message}</p>
-                        <button onclick="loadPlatformData('${platform}', '${category}', '${count}')" style="margin-top: 10px;">다시 시도</button>
-                    </div>
-                `;
+                console.error('랭킹 로드 오류:', error);
+                tableBody.innerHTML = `<tr><td colspan="11" style="text-align: center; padding: 30px; color: #dc3545;">오류: ${error.message}</td></tr>`;
             }
         }
 
-        function displayProducts(container, items) {
-            if (!items || items.length === 0) {
-                container.innerHTML = '<div style="text-align: center; padding: 40px; color: #6c757d;">상품이 없습니다</div>';
-                return;
-            }
+        // 랭킹 데이터 표시
+        function displayRankings(rankings) {
+            const tableBody = document.getElementById('ranking-table-body');
             
-            container.innerHTML = items.map(item => `
-                <div class="product" onclick="openProduct('${item.link}')">
-                    <div class="product-rank">#${item.rank}</div>
-                    <div class="product-image">
-                        ${item.image ? 
-                            `<img src="${item.image}" alt="${item.title}" onerror="this.style.display='none'">` : 
-                            '<div style="color: #6c757d;">이미지 없음</div>'
-                        }
-                    </div>
-                    <div class="product-info">
-                        <div class="product-title">${item.title}</div>
-                        <div class="product-price">${item.price}</div>
-                        <div class="product-meta">
-                            <span>${item.mallName}</span>
-                            <span>${item.brand}</span>
-                        </div>
-                    </div>
-                </div>
+            tableBody.innerHTML = rankings.map(item => `
+                <tr>
+                    <td><span class="rank-badge ${item.rank <= 3 ? 'top3' : ''}">${item.rank}</span></td>
+                    <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" 
+                        title="${item.productName}">${item.productName}</td>
+                    <td>${item.category}</td>
+                    <td>${item.brand}</td>
+                    <td class="price">${item.price.toLocaleString()}원</td>
+                    <td style="color: #e74c3c; font-weight: bold;">${item.discountRate}%</td>
+                    <td class="rating">⭐ ${item.rating}</td>
+                    <td>${item.reviewCount.toLocaleString()}</td>
+                    <td>${item.salesVolume.toLocaleString()}</td>
+                    <td title="${item.seller.name} (${item.seller.rating}⭐)">${item.seller.name}</td>
+                    <td>${item.platform}</td>
+                </tr>
             `).join('');
         }
 
-        function openProduct(link) {
-            if (link && link.trim()) {
-                window.open(link, '_blank', 'noopener,noreferrer');
-            } else {
-                alert('구매 링크가 없습니다.');
+        // 통계 업데이트
+        function updateStats(rankings) {
+            const avgPrice = rankings.reduce((sum, item) => sum + item.price, 0) / rankings.length;
+            const avgRating = rankings.reduce((sum, item) => sum + parseFloat(item.rating), 0) / rankings.length;
+            const totalReviews = rankings.reduce((sum, item) => sum + item.reviewCount, 0);
+            
+            document.getElementById('avg-price').textContent = Math.floor(avgPrice).toLocaleString() + '원';
+            document.getElementById('avg-rating').textContent = avgRating.toFixed(1);
+            document.getElementById('total-reviews').textContent = totalReviews.toLocaleString();
+        }
+
+        // 분석 보고서 생성
+        async function generateAnalysis() {
+            const productName = document.getElementById('product-name').value.trim();
+            if (!productName) {
+                alert('분석할 제품명을 입력해주세요.');
+                return;
+            }
+
+            const reportDiv = document.getElementById('analysis-report');
+            reportDiv.innerHTML = '<div class="loading"><div class="loading-spinner"></div><p>AI가 종합 분석 보고서를 생성하고 있습니다...</p></div>';
+            
+            try {
+                const category = document.getElementById('category').value;
+                const platform = document.getElementById('platform').value;
+                
+                const response = await fetch(`/api/advanced-analysis?product=${encodeURIComponent(productName)}&category=${encodeURIComponent(category)}&platform=${platform}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayAnalysisReport(data.analysis);
+                } else {
+                    throw new Error(data.error);
+                }
+            } catch (error) {
+                console.error('분석 생성 오류:', error);
+                reportDiv.innerHTML = `<div class="error"><h3>오류 발생</h3><p>${error.message}</p></div>`;
             }
         }
 
-        // 카테고리 변경 시 자동 새로고침
-        document.getElementById('category').addEventListener('change', loadData);
-        document.getElementById('count').addEventListener('change', loadData);
+        // 분석 보고서 표시
+        function displayAnalysisReport(analysis) {
+            const reportDiv = document.getElementById('analysis-report');
+            
+            reportDiv.innerHTML = `
+                <div class="report-section">
+                    <h3>📊 분석 대상: ${analysis.productName}</h3>
+                    <p>카테고리: ${analysis.category} | 분석일: ${new Date(analysis.analysisDate).toLocaleDateString()}</p>
+                </div>
+
+                <div class="report-section">
+                    <h3>🎯 1. 시장 포지셔닝 분석</h3>
+                    <div class="insight-grid">
+                        <div class="insight-card">
+                            <h4>주 타깃 고객</h4>
+                            <p><strong>연령:</strong> ${analysis.marketPositioning.targetCustomers.ageGroups.join(', ')}</p>
+                            <p><strong>성별:</strong> ${analysis.marketPositioning.targetCustomers.gender}</p>
+                            <p><strong>지역:</strong> ${analysis.marketPositioning.targetCustomers.regions.join(', ')}</p>
+                        </div>
+                        <div class="insight-card">
+                            <h4>가격대 분석</h4>
+                            <p><strong>저가:</strong> ${analysis.marketPositioning.priceSegment.lowEnd}</p>
+                            <p><strong>중가:</strong> ${analysis.marketPositioning.priceSegment.midRange}</p>
+                            <p><strong>고가:</strong> ${analysis.marketPositioning.priceSegment.highEnd}</p>
+                            <p><strong>권장가격:</strong> ${analysis.marketPositioning.priceSegment.recommendedPrice}</p>
+                        </div>
+                        <div class="insight-card">
+                            <h4>포지셔닝 전략</h4>
+                            <p><strong>최적 고객:</strong> ${analysis.marketPositioning.positioningStrategy.optimalCustomer}</p>
+                            <p><strong>최적 가격:</strong> ${analysis.marketPositioning.positioningStrategy.optimalPrice}</p>
+                            <p><strong>전략:</strong> ${analysis.marketPositioning.positioningStrategy.positioningAdvice}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="report-section">
+                    <h3>⚡ 2. 제품 퍼포먼스 요약</h3>
+                    <div class="insight-grid">
+                        <div class="insight-card">
+                            <h4>주요 강점</h4>
+                            <p><strong>키워드:</strong> ${analysis.performanceSummary.strengths.keywords.join(', ')}</p>
+                            <ul style="margin-top: 8px; font-size: 12px;">
+                                ${analysis.performanceSummary.strengths.topReasons.map(reason => `<li>${reason}</li>`).join('')}
+                            </ul>
+                        </div>
+                        <div class="insight-card">
+                            <h4>약점 및 불만</h4>
+                            <p><strong>키워드:</strong> ${analysis.performanceSummary.weaknesses.keywords.join(', ')}</p>
+                            <ul style="margin-top: 8px; font-size: 12px;">
+                                ${analysis.performanceSummary.weaknesses.mainComplaints.map(complaint => `<li>${complaint}</li>`).join('')}
+                            </ul>
+                        </div>
+                        <div class="insight-card">
+                            <h4>핵심 전략</h4>
+                            <p><strong>제품:</strong> ${analysis.performanceSummary.coreStrategy.productFocus}</p>
+                            <p><strong>서비스:</strong> ${analysis.performanceSummary.coreStrategy.serviceFocus}</p>
+                            <p><strong>마케팅:</strong> ${analysis.performanceSummary.coreStrategy.marketingFocus}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="report-section">
+                    <h3>📈 3. 시즌별 판매 추이</h3>
+                    <div class="insight-grid">
+                        <div class="insight-card">
+                            <h4>피크 시즌</h4>
+                            ${analysis.seasonalTrends.peakSeasons.map(season => `
+                                <p><strong>${season.period}:</strong> ${season.reason}</p>
+                                <p style="font-size: 12px; color: #6c757d;">전략: ${season.strategy}</p>
+                            `).join('')}
+                        </div>
+                        <div class="insight-card">
+                            <h4>월별 판매 지수</h4>
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; font-size: 11px;">
+                                ${analysis.seasonalTrends.yearlyTrend.map(month => `
+                                    <div>${month.month}: ${month.salesIndex}</div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="report-section">
+                    <h3>💡 4. 개선·혁신 포인트</h3>
+                    <div class="insight-grid">
+                        <div class="insight-card">
+                            <h4>제품 개선</h4>
+                            <ul style="font-size: 12px;">
+                                ${analysis.innovationPoints.productImprovement.map(point => `<li>${point}</li>`).join('')}
+                            </ul>
+                        </div>
+                        <div class="insight-card">
+                            <h4>패키징·브랜딩</h4>
+                            <ul style="font-size: 12px;">
+                                ${analysis.innovationPoints.packagingBranding.map(point => `<li>${point}</li>`).join('')}
+                            </ul>
+                        </div>
+                        <div class="insight-card">
+                            <h4>디지털 마케팅</h4>
+                            <ul style="font-size: 12px;">
+                                ${analysis.innovationPoints.digitalMarketing.map(point => `<li>${point}</li>`).join('')}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="report-section">
+                    <h3>🌍 5. 벤치마킹 & 확장 전략</h3>
+                    <div class="insight-grid">
+                        <div class="insight-card">
+                            <h4>글로벌 벤치마킹</h4>
+                            ${analysis.benchmarkingStrategy.globalCases.map(case_ => `
+                                <p><strong>${case_.brand}:</strong> ${case_.strategy}</p>
+                                <p style="font-size: 12px; color: #6c757d;">적용: ${case_.adaptation}</p>
+                            `).join('')}
+                        </div>
+                        <div class="insight-card">
+                            <h4>인플루언서 전략</h4>
+                            <ul style="font-size: 12px;">
+                                ${analysis.benchmarkingStrategy.influencerStrategy.map(strategy => `<li>${strategy}</li>`).join('')}
+                            </ul>
+                        </div>
+                        <div class="insight-card">
+                            <h4>런칭 고려사항</h4>
+                            <ul style="font-size: 12px;">
+                                ${analysis.benchmarkingStrategy.launchConsiderations.map(consideration => `<li>${consideration}</li>`).join('')}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="report-section">
+                    <h3>🎯 6. 자사 신제품 출시 최종 의견</h3>
+                    <div class="insight-grid">
+                        <div class="insight-card">
+                            <h4>런칭 전략</h4>
+                            <p><strong>최적 시기:</strong> ${analysis.finalRecommendation.launchTiming}</p>
+                            <p><strong>타깃 가격:</strong> ${analysis.finalRecommendation.targetPrice}</p>
+                        </div>
+                        <div class="insight-card">
+                            <h4>성공 요인</h4>
+                            <ul style="font-size: 12px;">
+                                ${analysis.finalRecommendation.keySuccess.map(factor => `<li>${factor}</li>`).join('')}
+                            </ul>
+                        </div>
+                        <div class="insight-card">
+                            <h4>리스크 & KPI</h4>
+                            <p><strong>주요 리스크:</strong></p>
+                            <ul style="font-size: 11px;">
+                                ${analysis.finalRecommendation.riskFactors.map(risk => `<li>${risk}</li>`).join('')}
+                            </ul>
+                            <p><strong>성공 KPI:</strong></p>
+                            <ul style="font-size: 11px;">
+                                ${analysis.finalRecommendation.successKPIs.map(kpi => `<li>${kpi}</li>`).join('')}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 엑셀 다운로드
+        function downloadExcel() {
+            const category = document.getElementById('category').value;
+            const type = document.getElementById('rankingType').value;
+            
+            const link = document.createElement('a');
+            link.href = `/api/download-excel?category=${encodeURIComponent(category)}&type=${type}`;
+            link.download = '';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // 이벤트 리스너
+        document.getElementById('category').addEventListener('change', loadRankings);
+        document.getElementById('platform').addEventListener('change', loadRankings);
+        document.getElementById('rankingType').addEventListener('change', loadRankings);
+
+        // 페이지 로드 시 초기 데이터 로드
+        document.addEventListener('DOMContentLoaded', function() {
+            loadRankings();
+        });
     </script>
 </body>
 </html>
