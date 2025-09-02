@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PLAY.G 실시간 쇼핑분석 대시보드</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🛒 PLAY.G 실시간 쇼핑분석 대시보드</h1>
+            <p class="subtitle">실제 API 연동 • 실시간 베스트셀러 1-200위</p>
+            
+            <div class="tabs">
+                <button class="tab active" onclick="switchPlatform('naver')">네이버 쇼핑</button>
+                <button class="tab" onclick="switchPlatform('coupang')">쿠팡</button>
+            </div>
+
+            <div class="controls">
+                <button class="btn refresh-btn" onclick="refreshData()">🔄 새로고침</button>
+                <button class="btn excel-btn" onclick="downloadExcel()">📊 엑셀 다운로드</button>
+                <div class="status" id="status">준비중...</div>
+            </div>
+        </header>
+
+        <main>
+            <div class="loading" id="loading" style="display: none;">
+                <div class="spinner"></div>
+                <p>실시간 데이터를 불러오는 중...</p>
+            </div>
+
+            <div class="products-grid" id="products-grid">
+                <!-- 상품들이 여기에 표시됩니다 -->
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
