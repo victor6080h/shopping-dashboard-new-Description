@@ -1,0 +1,13 @@
+{
+  "name": "shopping-dashboard-new",
+  "version": "1.0.0",
+  "description": "실시간 쇼핑 대시보드",
+  "type": "module",
+  "scripts": {
+    "build": "echo 'Build completed'"
+  },
+  "dependencies": {},
+  "engines": {
+    "node": ">=18"
+  }
+}
