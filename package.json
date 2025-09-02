@@ -1,13 +1,31 @@
 {
   "name": "shopping-dashboard-new",
   "version": "1.0.0",
-  "description": "실시간 쇼핑 대시보드",
-  "type": "module",
+  "description": "1-200위 실시간 쇼핑 랭킹 대시보드 - 네이버/쿠팡/기타 플랫폼 통합",
+  "main": "index.html",
   "scripts": {
-    "build": "echo 'Build completed'"
+    "dev": "vercel dev",
+    "build": "echo 'Static build complete'",
+    "start": "vercel dev"
   },
-  "dependencies": {},
+  "keywords": [
+    "shopping",
+    "ranking",
+    "naver",
+    "coupang",
+    "dashboard",
+    "analysis"
+  ],
+  "author": "PLAY.G",
+  "license": "MIT",
+  "dependencies": {
+    "crypto": "^1.0.1"
+  },
+  "devDependencies": {
+    "@vercel/node": "^2.0.0",
+    "@vercel/static": "^2.0.0"
+  },
   "engines": {
-    "node": ">=18"
+    "node": ">=18.0.0"
   }
 }
