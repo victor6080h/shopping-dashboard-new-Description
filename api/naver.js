@@ -13,30 +13,32 @@ export default async function handler(req, res) {
 
   try {
     console.log('🔍 네이버 API 호출 시작');
+    console.log('환경변수 확인:', {
+      clientId: process.env.NAVER_CLIENT_ID ? '설정됨' : '❌ 없음',
+      clientSecret: process.env.NAVER_CLIENT_SECRET ? '설정됨' : '❌ 없음'
+    });
 
-    // API 키 확인
+    // API 키 검증
     if (!process.env.NAVER_CLIENT_ID || !process.env.NAVER_CLIENT_SECRET) {
-      console.log('⚠️ 네이버 API 키가 설정되지 않음 - 테스트 데이터 사용');
-      
-      // 테스트 데이터
-      const testProducts = generateTestProducts('naver');
-      
+      console.error('❌ 네이버 API 키가 설정되지 않음');
       return res.status(200).json({
-        success: true,
-        products: testProducts,
-        totalCount: testProducts.length,
-        message: 'API 키 미설정 - 테스트 데이터 사용 중'
+        success: false,
+        error: 'API 키가 설정되지 않았습니다. Vercel 환경변수를 확인하세요.',
+        isTestData: true,
+        products: generateTestProducts()
       });
     }
 
     // 실제 네이버 API 호출
-    const categories = ['노트북', '스마트폰', '이어폰', '청소기', '운동화'];
+    const categories = ['노트북', '스마트폰', '이어폰', '청소기', '운동화', '화장품', '식품', '의류'];
     const allProducts = [];
 
     for (let i = 0; i < categories.length; i++) {
       const category = categories[i];
       
       try {
+        console.log(`📞 ${category} 카테고리 API 호출 중...`);
+        
         const response = await axios.get('https://openapi.naver.com/v1/search/shop.json', {
           headers: {
             'X-Naver-Client-Id': process.env.NAVER_CLIENT_ID,
@@ -44,84 +46,109 @@ export default async function handler(req, res) {
           },
           params: {
             query: category,
-            display: 40,
+            display: 25,
             start: 1,
             sort: 'sim'
           },
-          timeout: 10000
+          timeout: 15000
         });
 
-        const products = response.data.items.slice(0, 40).map((item, index) => ({
+        console.log(`✅ ${category}: ${response.data.items.length}개 상품 수신`);
+
+        const products = response.data.items.map((item, index) => ({
           rank: allProducts.length + index + 1,
           id: item.productId || `naver_${category}_${index}`,
           name: item.title.replace(/<[^>]*>/g, ''),
           price: item.lprice ? `${parseInt(item.lprice).toLocaleString()}원` : '가격 확인',
+          originalPrice: item.hprice ? `${parseInt(item.hprice).toLocaleString()}원` : null,
           image: item.image,
           link: item.link,
           mallName: item.mallName,
+          maker: item.maker,
+          brand: item.brand,
           category: category,
-          platform: 'naver'
+          platform: 'naver',
+          isRealData: true
         }));
 
         allProducts.push(...products);
         
-        // API 호출 간격
+        // API 호출 간격 (레이트 리밋 방지)
         if (i < categories.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 200));
+          await new Promise(resolve => setTimeout(resolve, 300));
         }
         
       } catch (categoryError) {
         console.error(`❌ ${category} 카테고리 오류:`, categoryError.message);
+        
+        // 카테고리별 오류 시에도 일부 테스트 데이터 추가
+        const fallbackProducts = generateCategoryFallback(category, allProducts.length);
+        allProducts.push(...fallbackProducts);
       }
     }
 
-    console.log(`✅ 네이버 상품 ${allProducts.length}개 조회 완료`);
+    const finalProducts = allProducts.slice(0, 200);
+    
+    console.log(`🎉 네이버 API 호출 완료: 총 ${finalProducts.length}개 상품`);
+    console.log(`📊 실제 데이터: ${finalProducts.filter(p => p.isRealData).length}개`);
 
     res.status(200).json({
       success: true,
-      products: allProducts.slice(0, 200),
-      totalCount: allProducts.length
+      products: finalProducts,
+      totalCount: finalProducts.length,
+      realDataCount: finalProducts.filter(p => p.isRealData).length,
+      apiStatus: 'success',
+      timestamp: new Date().toISOString()
     });
 
   } catch (error) {
     console.error('❌ 네이버 API 전체 오류:', error.message);
     
-    // 오류 시 테스트 데이터 반환
-    const testProducts = generateTestProducts('naver');
-    
     res.status(200).json({
-      success: true,
-      products: testProducts,
-      totalCount: testProducts.length,
-      message: `API 오류로 테스트 데이터 사용: ${error.message}`
+      success: false,
+      error: error.message,
+      isTestData: true,
+      products: generateTestProducts(),
+      apiStatus: 'error'
     });
   }
 }
 
 // 테스트 데이터 생성 함수
-function generateTestProducts(platform) {
-  const naverProducts = [
-    { name: "삼성 갤럭시 버즈3 프로", price: "189,000원", link: "https://shopping.naver.com/catalog/34567890" },
-    { name: "아이폰 15 프로 케이스", price: "29,900원", link: "https://shopping.naver.com/catalog/45678901" },
-    { name: "다이슨 V15 무선청소기", price: "699,000원", link: "https://shopping.naver.com/catalog/56789012" },
-    { name: "나이키 에어포스1", price: "119,000원", link: "https://shopping.naver.com/catalog/67890123" },
-    { name: "LG 그램 17인치 노트북", price: "1,299,000원", link: "https://shopping.naver.com/catalog/78901234" }
+function generateTestProducts() {
+  const testProducts = [
+    { name: "삼성 갤럭시 버즈3 프로 [테스트]", price: "189,000원", link: "https://shopping.naver.com/catalog/34567890" },
+    { name: "아이폰 15 프로 케이스 [테스트]", price: "29,900원", link: "https://shopping.naver.com/catalog/45678901" },
+    { name: "다이슨 V15 무선청소기 [테스트]", price: "699,000원", link: "https://shopping.naver.com/catalog/56789012" },
+    { name: "나이키 에어포스1 [테스트]", price: "119,000원", link: "https://shopping.naver.com/catalog/67890123" },
+    { name: "LG 그램 17인치 노트북 [테스트]", price: "1,299,000원", link: "https://shopping.naver.com/catalog/78901234" }
   ];
 
-  const products = [];
-  for (let i = 0; i < 200; i++) {
-    const base = naverProducts[i % naverProducts.length];
-    products.push({
-      rank: i + 1,
-      id: `${platform}_${i + 1}`,
-      name: `${base.name} - ${i + 1}위`,
-      price: base.price,
-      image: `https://via.placeholder.com/200x180?text=${encodeURIComponent(base.name)}`,
-      link: base.link,
-      mallName: "네이버쇼핑",
-      platform: platform
-    });
-  }
-  
-  return products;
+  return testProducts.map((product, index) => ({
+    rank: index + 1,
+    id: `test_${index + 1}`,
+    name: product.name,
+    price: product.price,
+    image: `https://via.placeholder.com/200x180?text=${encodeURIComponent(product.name)}`,
+    link: product.link,
+    mallName: "테스트 쇼핑몰",
+    platform: 'naver',
+    isRealData: false,
+    category: '테스트'
+  }));
+}
+
+function generateCategoryFallback(category, startRank) {
+  return [{
+    rank: startRank + 1,
+    id: `fallback_${category}`,
+    name: `${category} 베스트 상품 [API 오류로 대체 데이터]`,
+    price: "가격 확인 필요",
+    image: `https://via.placeholder.com/200x180?text=${encodeURIComponent(category)}`,
+    link: `https://shopping.naver.com/search/all?query=${encodeURIComponent(category)}`,
+    mallName: "네이버쇼핑",
+    platform: 'naver',
+    isRealData: false,
+    category: category
+  }];
 }
